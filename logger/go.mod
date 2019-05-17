@@ -1,4 +1,4 @@
-module github.com/adjackura/guest-logging-go/logger
+module github.com/GoogleCloudPlatform/guest-logging-go/logger
 
 go 1.12
 
