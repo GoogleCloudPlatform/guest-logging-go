@@ -70,11 +70,11 @@ func (e LogEntry) String() string {
 		return formatFunction(e)
 	}
 	if e.Severity == Error || e.Severity == Critical {
-		// 2006-01-02T15:04:05.999999Z07:00 ERROR file.go:82: This is a log message.
-		return fmt.Sprintf("%s %s %s:%d: %s", e.LocalTimestamp, e.Severity, e.Source.File, e.Source.Line, e.Message)
+		// 2006-01-02T15:04:05.999999Z07:00 LoggerName ERROR file.go:82: This is a log message.
+		return fmt.Sprintf("%s %s %s %s:%d: %s", e.LocalTimestamp, loggerName, e.Severity, e.Source.File, e.Source.Line, e.Message)
 	}
-	// 2006-01-02T15:04:05.999999Z07:00 INFO: This is a log message.
-	return fmt.Sprintf("%s %s: %s", e.LocalTimestamp, e.Severity, e.Message)
+	// 2006-01-02T15:04:05.999999Z07:00 LoggerName INFO: This is a log message.
+	return fmt.Sprintf("%s %s %s: %s", e.LocalTimestamp, loggerName, e.Severity, e.Message)
 }
 
 func (e LogEntry) bytes() []byte {
@@ -82,8 +82,8 @@ func (e LogEntry) bytes() []byte {
 }
 
 func now() string {
-	// RFC3339 with microseconds.
-	return time.Now().Format("2006-01-02T15:04:05.999999Z07:00")
+	// RFC3339 with milliseconds.
+	return time.Now().Format("2006-01-02T15:04:05.9999Z07:00")
 }
 
 func caller(depth int) *logpb.LogEntrySourceLocation {

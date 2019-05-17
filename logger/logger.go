@@ -32,6 +32,7 @@ var (
 	cloudLogger        *logging.Logger
 	debugEnabled       bool
 	stdoutEnabled      bool
+	loggerName         string
 	formatFunction     func(LogEntry) string
 )
 
@@ -53,11 +54,12 @@ func Init(ctx context.Context, opts LogOpts) error {
 		return fmt.Errorf(err)
 	}
 
+	loggerName = opts.LoggerName
 	debugEnabled = opts.Debug
 	stdoutEnabled = opts.Stdout
 	formatFunction = opts.FormatFunction
 
-	localSetup(opts.LoggerName)
+	localSetup(loggerName)
 
 	var err error
 	cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
@@ -68,7 +70,7 @@ func Init(ctx context.Context, opts LogOpts) error {
 	}
 
 	// This automatically detects and associates with a GCE resource.
-	cloudLogger = cloudLoggingClient.Logger(opts.LoggerName)
+	cloudLogger = cloudLoggingClient.Logger(loggerName)
 
 	go func() {
 		for {
