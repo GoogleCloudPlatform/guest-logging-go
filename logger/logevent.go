@@ -60,7 +60,7 @@ type LogEntry struct {
 	CallDepth int               `json:"-"`
 	Severity  Severity          `json:"-"`
 	// Source will be overwritten, do not set.
-	Source *logpb.LogEntrySourceLocation
+	Source *logpb.LogEntrySourceLocation `json:"-"`
 	// LocalTimestamp will be overwritten, do not set.
 	LocalTimestamp string `json:"localTimestamp"`
 }
