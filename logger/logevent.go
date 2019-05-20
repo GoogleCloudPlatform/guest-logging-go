@@ -83,7 +83,7 @@ func (e LogEntry) bytes() []byte {
 
 func now() string {
 	// RFC3339 with milliseconds.
-	return time.Now().Format("2006-01-02T15:04:05.9999Z07:00")
+	return time.Now().Format("2006-01-02T15:04:05.0000Z07:00")
 }
 
 func caller(depth int) *logpb.LogEntrySourceLocation {
