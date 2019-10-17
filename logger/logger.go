@@ -18,6 +18,7 @@ package logger
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -31,35 +32,37 @@ var (
 	cloudLoggingClient *logging.Client
 	cloudLogger        *logging.Logger
 	debugEnabled       bool
-	stdoutEnabled      bool
 	loggerName         string
 	formatFunction     func(LogEntry) string
+
+	writers []io.Writer
 )
 
 // LogOpts represents options for logging.
 type LogOpts struct {
-	Stdout      bool
 	Debug       bool
 	ProjectName string
 	LoggerName  string
 	// FormatFunction will produce the string representation of each log event.
 	FormatFunction func(LogEntry) string
+	// Additional writers that will be used during logging.
+	Writers []io.Writer
 }
 
 // Init instantiates the logger.
 func Init(ctx context.Context, opts LogOpts) error {
 	if opts.LoggerName == "" {
-		err := "Logger name must be set"
-		Errorf(err)
-		return fmt.Errorf(err)
+		return fmt.Errorf("logger name must be set")
 	}
 
 	loggerName = opts.LoggerName
 	debugEnabled = opts.Debug
-	stdoutEnabled = opts.Stdout
 	formatFunction = opts.FormatFunction
+	writers = opts.Writers
 
-	localSetup(loggerName)
+	if err := localSetup(loggerName); err != nil {
+		return fmt.Errorf("logger Init localSetup error: %v", err)
+	}
 
 	var err error
 	cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
@@ -101,6 +104,9 @@ func Log(e LogEntry) {
 	e.LocalTimestamp = now()
 	e.Source = caller(e.CallDepth)
 	local(e)
+	for _, w := range writers {
+		w.Write(e.bytes())
+	}
 
 	var cloudSev logging.Severity
 	if cloudLogger != nil {
