@@ -19,7 +19,6 @@ package logger
 
 import (
 	"log/syslog"
-	"os"
 )
 
 var (
@@ -51,8 +50,5 @@ func local(e LogEntry) {
 		case Critical:
 			slWriter.Crit(msg)
 		}
-	}
-	if stdoutEnabled {
-		os.Stdout.Write(e.bytes())
 	}
 }

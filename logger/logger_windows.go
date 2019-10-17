@@ -18,31 +18,24 @@
 package logger
 
 import (
-	"os"
+	"strings"
 
-	"github.com/tarm/serial"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 const EID = 882
 
 var (
-	el   *eventlog.Log
-	port *serial.Port
+	el *eventlog.Log
 )
 
 func localSetup(loggerName string) error {
 	err := eventlog.InstallAsEventCreate(loggerName, eventlog.Info|eventlog.Warning|eventlog.Error)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "registry key already exists") {
 		return err
 	}
 
 	el, err = eventlog.Open(loggerName)
-	if err != nil {
-		return err
-	}
-
-	port, err = serial.OpenPort(&serial.Config{Name: "COM1", Baud: 115200})
 	return err
 }
 
@@ -50,16 +43,9 @@ func localClose() {
 	if el != nil {
 		el.Close()
 	}
-	if port != nil {
-		port.Close()
-	}
 }
 
 func local(e LogEntry) {
-	if port != nil {
-		port.Write(e.bytes())
-	}
-
 	if el != nil {
 		msg := e.String()
 		switch e.Severity {
@@ -70,8 +56,5 @@ func local(e LogEntry) {
 		case Error, Critical:
 			el.Error(EID, msg)
 		}
-	}
-	if stdoutEnabled {
-		os.Stdout.Write(e.bytes())
 	}
 }
