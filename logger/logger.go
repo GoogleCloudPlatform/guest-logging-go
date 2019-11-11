@@ -40,9 +40,11 @@ var (
 
 // LogOpts represents options for logging.
 type LogOpts struct {
-	Debug       bool
-	ProjectName string
-	LoggerName  string
+	Debug               bool
+	ProjectName         string
+	LoggerName          string
+	DisableLocalLogging bool
+	DisableCloudLogging bool
 	// FormatFunction will produce the string representation of each log event.
 	FormatFunction func(LogEntry) string
 	// Additional writers that will be used during logging.
@@ -60,16 +62,20 @@ func Init(ctx context.Context, opts LogOpts) error {
 	formatFunction = opts.FormatFunction
 	writers = opts.Writers
 
-	if err := localSetup(loggerName); err != nil {
-		return fmt.Errorf("logger Init localSetup error: %v", err)
+	if !opts.DisableLocalLogging {
+		if err := localSetup(loggerName); err != nil {
+			return fmt.Errorf("logger Init localSetup error: %v", err)
+		}
 	}
 
-	var err error
-	cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
-	if err != nil {
-		Errorf("Continuing without cloud logging due to error in initialization: %v", err.Error())
-		// Log but don't return this error, as it doesn't prevent continuing.
-		return nil
+	if !opts.DisableCloudLogging {
+		var err error
+		cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
+		if err != nil {
+			Errorf("Continuing without cloud logging due to error in initialization: %v", err.Error())
+			// Log but don't return this error, as it doesn't prevent continuing.
+			return nil
+		}
 	}
 
 	// This automatically detects and associates with a GCE resource.
