@@ -32,7 +32,9 @@ func localSetup(loggerName string) error {
 }
 
 func localClose() {
-	slWriter.Close()
+	if slWriter != nil {
+		slWriter.Close()
+	}
 }
 
 func local(e LogEntry) {
