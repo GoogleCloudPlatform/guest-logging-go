@@ -68,7 +68,7 @@ func Init(ctx context.Context, opts LogOpts) error {
 		}
 	}
 
-	if !opts.DisableCloudLogging {
+	if !opts.DisableCloudLogging || opts.ProjectName == "" {
 		var err error
 		cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
 		if err != nil {
@@ -76,17 +76,17 @@ func Init(ctx context.Context, opts LogOpts) error {
 			// Log but don't return this error, as it doesn't prevent continuing.
 			return nil
 		}
+
+		// This automatically detects and associates with a GCE resource.
+		cloudLogger = cloudLoggingClient.Logger(loggerName)
+
+		go func() {
+			for {
+				time.Sleep(5 * time.Second)
+				cloudLogger.Flush()
+			}
+		}()
 	}
-
-	// This automatically detects and associates with a GCE resource.
-	cloudLogger = cloudLoggingClient.Logger(loggerName)
-
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			cloudLogger.Flush()
-		}
-	}()
 
 	return nil
 }
