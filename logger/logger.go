@@ -68,7 +68,7 @@ func Init(ctx context.Context, opts LogOpts) error {
 		}
 	}
 
-	if !opts.DisableCloudLogging || opts.ProjectName == "" {
+	if !opts.DisableCloudLogging && opts.ProjectName != "" {
 		var err error
 		cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
 		if err != nil {
