@@ -51,6 +51,11 @@ type LogOpts struct {
 	Writers []io.Writer
 }
 
+// SetDebugLogging enables or disables debug level logging.
+func SetDebugLogging(enabled bool) {
+	debugEnabled = enabled
+}
+
 // Init instantiates the logger.
 func Init(ctx context.Context, opts LogOpts) error {
 	if opts.LoggerName == "" {
