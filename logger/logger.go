@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
+	"google.golang.org/api/option"
 )
 
 var (
@@ -48,7 +49,8 @@ type LogOpts struct {
 	// FormatFunction will produce the string representation of each log event.
 	FormatFunction func(LogEntry) string
 	// Additional writers that will be used during logging.
-	Writers []io.Writer
+	Writers   []io.Writer
+	UserAgent string
 }
 
 // SetDebugLogging enables or disables debug level logging.
@@ -75,7 +77,11 @@ func Init(ctx context.Context, opts LogOpts) error {
 
 	if !opts.DisableCloudLogging && opts.ProjectName != "" {
 		var err error
-		cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName)
+		cOpts := []option.ClientOption{}
+		if opts.UserAgent != "" {
+			cOpts = append(cOpts, option.WithUserAgent(opts.UserAgent))
+		}
+		cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName, cOpts...)
 		if err != nil {
 			Errorf("Continuing without cloud logging due to error in initialization: %v", err.Error())
 			// Log but don't return this error, as it doesn't prevent continuing.
