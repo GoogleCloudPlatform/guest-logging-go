@@ -88,6 +88,9 @@ func Init(ctx context.Context, opts LogOpts) error {
 			return nil
 		}
 
+		// Override default error handler. Must be a func and not nil.
+		cloudLoggingClient.OnError = func(e error) { return }
+
 		// This automatically detects and associates with a GCE resource.
 		cloudLogger = cloudLoggingClient.Logger(loggerName)
 
