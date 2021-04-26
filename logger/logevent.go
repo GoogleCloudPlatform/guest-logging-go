@@ -62,7 +62,8 @@ type LogEntry struct {
 	// Source will be overwritten, do not set.
 	Source *logpb.LogEntrySourceLocation `json:"-"`
 	// LocalTimestamp will be overwritten, do not set.
-	LocalTimestamp string `json:"localTimestamp"`
+	LocalTimestamp    string      `json:"localTimestamp"`
+	StructuredMessage interface{} `json:"struct,omitempty"`
 }
 
 func (e LogEntry) String() string {
