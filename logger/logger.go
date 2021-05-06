@@ -130,6 +130,12 @@ func Log(e LogEntry) {
 
 	var cloudSev logging.Severity
 	if cloudLogger != nil {
+		var payload interface{}
+		if e.StructuredPayload != nil {
+			payload = e.StructuredPayload
+		} else {
+			payload = e
+		}
 		switch e.Severity {
 		case Debug:
 			cloudSev = logging.Debug
@@ -144,7 +150,7 @@ func Log(e LogEntry) {
 		default:
 			cloudSev = logging.Default
 		}
-		cloudLogger.Log(logging.Entry{Severity: cloudSev, SourceLocation: e.Source, Payload: e, Labels: e.Labels})
+		cloudLogger.Log(logging.Entry{Severity: cloudSev, SourceLocation: e.Source, Payload: payload, Labels: e.Labels})
 	}
 }
 

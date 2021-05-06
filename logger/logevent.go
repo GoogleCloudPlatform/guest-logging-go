@@ -55,10 +55,15 @@ func (v Severity) String() string {
 
 // LogEntry encapsulates a single log entry.
 type LogEntry struct {
-	Message   string            `json:"message"`
-	Labels    map[string]string `json:"-"`
-	CallDepth int               `json:"-"`
-	Severity  Severity          `json:"-"`
+	Message string `json:"message"`
+	// If present, this will be set as Payload to Cloud Logging
+	// instead of Message and LocalTimeStamp.
+	//
+	// Note: Message is still sent to local logs.
+	StructuredPayload interface{}       `json:"omitempty"`
+	Labels            map[string]string `json:"-"`
+	CallDepth         int               `json:"-"`
+	Severity          Severity          `json:"-"`
 	// Source will be overwritten, do not set.
 	Source *logpb.LogEntrySourceLocation `json:"-"`
 	// LocalTimestamp will be overwritten, do not set.
