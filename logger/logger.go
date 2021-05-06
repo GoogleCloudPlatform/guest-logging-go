@@ -131,8 +131,8 @@ func Log(e LogEntry) {
 	var cloudSev logging.Severity
 	if cloudLogger != nil {
 		var payload interface{}
-		if e.StructuredMessage != nil {
-			payload = e.StructuredMessage
+		if e.StructuredPayload != nil {
+			payload = e.StructuredPayload
 		} else {
 			payload = e
 		}

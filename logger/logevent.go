@@ -60,7 +60,7 @@ type LogEntry struct {
 	// instead of Message and LocalTimeStamp.
 	//
 	// Note: Message is still sent to local logs.
-	StructuredMessage interface{}       `json:"omitempty"`
+	StructuredPayload interface{}       `json:"omitempty"`
 	Labels            map[string]string `json:"-"`
 	CallDepth         int               `json:"-"`
 	Severity          Severity          `json:"-"`
