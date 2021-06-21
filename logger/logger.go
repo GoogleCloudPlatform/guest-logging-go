@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/logging"
 	"google.golang.org/api/option"
 )
@@ -91,8 +92,15 @@ func Init(ctx context.Context, opts LogOpts) error {
 		// Override default error handler. Must be a func and not nil.
 		cloudLoggingClient.OnError = func(e error) { return }
 
-		// This automatically detects and associates with a GCE resource.
-		cloudLogger = cloudLoggingClient.Logger(loggerName)
+		// The logger automatically detects and associates with a GCE
+		// resource. However instance_name is not included in this
+		// resource, so add an instance_name label to all log Entries.
+		name, err := metadata.InstanceName()
+		if err == nil {
+			cloudLogger = cloudLoggingClient.Logger(loggerName, logging.CommonLabels(map[string]string{"instance_name": name}))
+		} else {
+			cloudLogger = cloudLoggingClient.Logger(loggerName)
+		}
 
 		go func() {
 			for {
