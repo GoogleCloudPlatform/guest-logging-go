@@ -12,6 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+//go:build !windows
 // +build !windows
 
 // Package logger logs messages as appropriate.
@@ -31,10 +32,11 @@ func localSetup(loggerName string) error {
 	return err
 }
 
-func localClose() {
+func localClose() error {
 	if slWriter != nil {
-		slWriter.Close()
+		return slWriter.Close()
 	}
+	return nil
 }
 
 func local(e LogEntry) {

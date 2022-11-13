@@ -22,9 +22,9 @@ import (
 	"os"
 	"time"
 
-	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/logging"
 	"google.golang.org/api/option"
+	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
 var (
@@ -52,6 +52,8 @@ type LogOpts struct {
 	// Additional writers that will be used during logging.
 	Writers   []io.Writer
 	UserAgent string
+	// metadata uses the GCE metadata server by default.
+	metadata metadataProvider
 }
 
 // SetDebugLogging enables or disables debug level logging.
@@ -59,10 +61,47 @@ func SetDebugLogging(enabled bool) {
 	debugEnabled = enabled
 }
 
+func cloudLoggerOpts(metadata metadataProvider) []logging.LoggerOption {
+	if metadata.OnGKE() {
+		return []logging.LoggerOption{logging.CommonResource(&mrpb.MonitoredResource{
+			Type: "k8s_node",
+			Labels: map[string]string{
+				"cluster_name": metadata.K8sClusterName(),
+				// Although there is a cluster-location instance attribute in GKE nodes, it may be useful to know the actual zone of this node.
+				"location":   metadata.Zone(),
+				"node_name":  metadata.InstanceName(),
+				"project_id": metadata.ProjectID(),
+			},
+		})}
+	} else if !metadata.OnGCE() {
+		// Who knows where this is running. Let Cloud Logging figure out the correct monitored resource type, if it can.
+		return []logging.LoggerOption{}
+	}
+	var opts []logging.LoggerOption
+	// The gce_instance resource type has instance_id, but not the name of the instance.
+	// To faciliate queries, we add an instance_name label to all log Entries.
+	name := metadata.InstanceName()
+	if name != "" {
+		opts = append(opts, logging.CommonLabels(map[string]string{"instance_name": name}))
+	}
+	opts = append(opts, logging.CommonResource(&mrpb.MonitoredResource{
+		Type: "gce_instance",
+		Labels: map[string]string{
+			"instance_id": metadata.InstanceID(),
+			"project_id":  metadata.ProjectID(),
+			"zone":        metadata.Zone(),
+		},
+	}))
+	return opts
+}
+
 // Init instantiates the logger.
 func Init(ctx context.Context, opts LogOpts) error {
 	if opts.LoggerName == "" {
 		return fmt.Errorf("logger name must be set")
+	}
+	if opts.metadata == nil {
+		opts.metadata = defaultGCEMetadataProvider
 	}
 
 	loggerName = opts.LoggerName
@@ -92,15 +131,8 @@ func Init(ctx context.Context, opts LogOpts) error {
 		// Override default error handler. Must be a func and not nil.
 		cloudLoggingClient.OnError = func(e error) { return }
 
-		// The logger automatically detects and associates with a GCE
-		// resource. However instance_name is not included in this
-		// resource, so add an instance_name label to all log Entries.
-		name, err := metadata.InstanceName()
-		if err == nil {
-			cloudLogger = cloudLoggingClient.Logger(loggerName, logging.CommonLabels(map[string]string{"instance_name": name}))
-		} else {
-			cloudLogger = cloudLoggingClient.Logger(loggerName)
-		}
+		clOpts := cloudLoggerOpts(opts.metadata)
+		cloudLogger = cloudLoggingClient.Logger(loggerName, clOpts...)
 
 		go func() {
 			for {
@@ -114,11 +146,20 @@ func Init(ctx context.Context, opts LogOpts) error {
 }
 
 // Close closes the logger.
-func Close() {
+func Close() error {
+	var errs []error
 	if cloudLoggingClient != nil {
-		cloudLoggingClient.Close()
+		if err := cloudLoggingClient.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("Failed to close Cloud Logging client: %v", err))
+		}
 	}
-	localClose()
+	if err := localClose(); err != nil {
+		errs = append(errs, fmt.Errorf("Failed to close local client: %v", err))
+	}
+	if errs != nil {
+		return fmt.Errorf("close errors: %v", errs)
+	}
+	return nil
 }
 
 // Log writes an entry to all outputs.
