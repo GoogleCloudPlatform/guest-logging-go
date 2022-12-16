@@ -116,6 +116,7 @@ func Init(ctx context.Context, opts LogOpts) error {
 // Close closes the logger.
 func Close() {
 	if cloudLoggingClient != nil {
+		cloudLogger.Flush()
 		cloudLoggingClient.Close()
 	}
 	localClose()
