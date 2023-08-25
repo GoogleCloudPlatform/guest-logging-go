@@ -77,40 +77,50 @@ func Init(ctx context.Context, opts LogOpts) error {
 	}
 
 	if !opts.DisableCloudLogging && opts.ProjectName != "" {
-		var err error
-		cOpts := []option.ClientOption{}
-		if opts.UserAgent != "" {
-			cOpts = append(cOpts, option.WithUserAgent(opts.UserAgent))
-		}
-		cloudLoggingClient, err = logging.NewClient(ctx, opts.ProjectName, cOpts...)
-		if err != nil {
-			Errorf("Continuing without cloud logging due to error in initialization: %v", err.Error())
-			// Log but don't return this error, as it doesn't prevent continuing.
-			return nil
-		}
-
-		// Override default error handler. Must be a func and not nil.
-		cloudLoggingClient.OnError = func(e error) { return }
-
-		// The logger automatically detects and associates with a GCE
-		// resource. However instance_name is not included in this
-		// resource, so add an instance_name label to all log Entries.
-		name, err := metadata.InstanceName()
-		if err == nil {
-			cloudLogger = cloudLoggingClient.Logger(loggerName, logging.CommonLabels(map[string]string{"instance_name": name}))
-		} else {
-			cloudLogger = cloudLoggingClient.Logger(loggerName)
-		}
-
-		go func() {
-			for {
-				time.Sleep(5 * time.Second)
-				cloudLogger.Flush()
-			}
-		}()
+		SetupCloudLogging(ctx, opts.UserAgent, opts.ProjectName)
 	}
 
 	return nil
+}
+
+// SetupCloudLogging initializes the cloud logging client.
+func SetupCloudLogging(ctx context.Context, userAgent string, projectName string) {
+	if projectName == "" {
+		Warningf("projectName is empty, skipping cloud logging setup.")
+	}
+
+	cOpts := []option.ClientOption{}
+	if userAgent != "" {
+		cOpts = append(cOpts, option.WithUserAgent(userAgent))
+	}
+
+	var err error
+	cloudLoggingClient, err = logging.NewClient(ctx, projectName, cOpts...)
+	if err != nil {
+		// Log but don't return this error, as it doesn't prevent continuing.
+		Errorf("Continuing without cloud logging due to error in initialization: %v", err.Error())
+		return
+	}
+
+	// Override default error handler. Must be a func and not nil.
+	cloudLoggingClient.OnError = func(e error) { return }
+
+	// The logger automatically detects and associates with a GCE
+	// resource. However instance_name is not included in this
+	// resource, so add an instance_name label to all log Entries.
+	name, err := metadata.InstanceName()
+	if err == nil {
+		cloudLogger = cloudLoggingClient.Logger(loggerName, logging.CommonLabels(map[string]string{"instance_name": name}))
+	} else {
+		cloudLogger = cloudLoggingClient.Logger(loggerName)
+	}
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			cloudLogger.Flush()
+		}
+	}()
 }
 
 // Close closes the logger.
