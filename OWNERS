@@ -2,13 +2,16 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
 approvers:
+  - a-crate
   - adjackura
+  - ajorg
   - bkatyl
   - chaitanyakulkarni28
   - dorileo
+  - drewhli
+  - elicriffield
+  - gaughen
   - jjerger
   - karnvadaliya
   - koln67
-  - quintonamore
-  - vorakl
   - zmarano
