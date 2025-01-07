@@ -116,6 +116,14 @@ func Init(ctx context.Context, opts LogOpts) error {
 // Close closes the logger.
 func Close() {
 	if cloudLoggingClient != nil {
+		// Attempt to connect to Cloud Logging.
+		timeoutContext, cancelFunc := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancelFunc()
+
+		if err := cloudLoggingClient.Ping(timeoutContext); err != nil {
+			Warningf("Cannot connect to cloud logging, skipping flush: %v", err)
+			return
+		}
 		cloudLogger.Flush()
 		cloudLoggingClient.Close()
 	}
