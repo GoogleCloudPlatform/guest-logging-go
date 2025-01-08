@@ -122,10 +122,10 @@ func Close() {
 
 		if err := cloudLoggingClient.Ping(timeoutContext); err != nil {
 			Warningf("Cannot connect to cloud logging, skipping flush: %v", err)
-			return
+		} else {
+			cloudLogger.Flush()
+			cloudLoggingClient.Close()
 		}
-		cloudLogger.Flush()
-		cloudLoggingClient.Close()
 	}
 	localClose()
 }
