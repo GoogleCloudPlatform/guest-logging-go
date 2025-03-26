@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
@@ -40,6 +41,13 @@ var (
 	writers []io.Writer
 )
 
+const (
+	// The following are MIG labels.
+	migNameLabel   = `compute.googleapis.com/instance_group_manager/name`
+	migZoneLabel   = `compute.googleapis.com/instance_group_manager/zone`
+	migRegionLabel = `compute.googleapis.com/instance_group_manager/region`
+)
+
 // LogOpts represents options for logging.
 type LogOpts struct {
 	Debug               bool
@@ -52,11 +60,39 @@ type LogOpts struct {
 	// Additional writers that will be used during logging.
 	Writers   []io.Writer
 	UserAgent string
+	// MIG is the Managed Instance Group, used for labeling logs.
+	MIG string
 }
 
 // SetDebugLogging enables or disables debug level logging.
 func SetDebugLogging(enabled bool) {
 	debugEnabled = enabled
+}
+
+// parseMIGLabels parses the given MIG string into a map of labels for
+// Cloud Logging.
+func parseMIGLabels(mig string) map[string]string {
+	labels := make(map[string]string)
+	if mig == "" {
+		return labels
+	}
+
+	migRe := regexp.MustCompile(`^projects/[^/]+/(zones|regions)/([^/]+)/instanceGroupManagers/([^/]+)$`)
+	matches := migRe.FindStringSubmatch(mig)
+	if matches == nil {
+		return labels
+	}
+
+	var locationLabel string
+	switch matches[1] {
+	case "zones":
+		locationLabel = migZoneLabel
+	case "regions":
+		locationLabel = migRegionLabel
+	}
+	labels[migNameLabel] = matches[3]
+	labels[locationLabel] = matches[2]
+	return labels
 }
 
 // Init instantiates the logger.
@@ -96,11 +132,19 @@ func Init(ctx context.Context, opts LogOpts) error {
 		// resource. However instance_name is not included in this
 		// resource, so add an instance_name label to all log Entries.
 		name, err := metadata.InstanceName()
+		var labels map[string]string
 		if err == nil {
-			cloudLogger = cloudLoggingClient.Logger(loggerName, logging.CommonLabels(map[string]string{"instance_name": name}))
-		} else {
-			cloudLogger = cloudLoggingClient.Logger(loggerName)
+			labels["instance_name"] = name
 		}
+
+		// Add MIG labels if provided.
+		migLabels := parseMIGLabels(opts.MIG)
+		for k, v := range migLabels {
+			labels[k] = v
+		}
+
+		// Initialize the logger.
+		cloudLogger = cloudLoggingClient.Logger(loggerName, logging.CommonLabels(labels))
 
 		go func() {
 			for {
