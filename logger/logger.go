@@ -132,7 +132,7 @@ func Init(ctx context.Context, opts LogOpts) error {
 		// resource. However instance_name is not included in this
 		// resource, so add an instance_name label to all log Entries.
 		name, err := metadata.InstanceName()
-		var labels map[string]string
+		labels := make(map[string]string)
 		if err == nil {
 			labels["instance_name"] = name
 		}
